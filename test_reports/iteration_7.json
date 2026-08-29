@@ -1,0 +1,22 @@
+{
+  "summary": "Iterasi 7 (frontend/UI-only): verifikasi off-canvas mobile sidebar di /app/bengkel/includes/header.php. Playwright: 6 viewport mobile (320/360/375/390/412/430) -> sidebar off-screen default (x=-273), hamburger tampil, TIDAK ada horizontal scroll (scrollWidth==innerWidth), main width == 100% viewport. Buka hamburger -> x=0, position fixed, z-index 1050, height==innerHeight (812), transition 0.25s, overflow-y auto, overlay .show opacity 1, body overflow hidden. Tutup via tombol X dan via klik overlay OK. Navigasi via nav-parts/nav-customers/nav-pos: halaman termuat (title benar) dan sidebar tertutup setelah navigasi, tanpa horizontal scroll. Halaman dashboard/reports/transactions/settings di 375px: tanpa horizontal scroll, mobile-topbar tidak menutupi judul (topbar bottom 65 < title top 81). Viewport pendek 360x480: sidebar scrollable (scrollHeight 742 > clientHeight 480, scrollTop=150 berhasil). Breakpoint: 768px & 991px & 1440 & 1920 -> sidebar static kolom, overlay display:none, hamburger hidden; 767px -> off-canvas aktif. Navigasi desktop (reports/stock/users) OK. Smoke test pytest baru: login admin/admin123 + 14 halaman semua 200 OK tanpa Fatal error/Warning/Notice. Tidak ada console error.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Semua halaman @ mobile <768px", "issues": ["Nama user ditampilkan dua kali: di mobile-topbar (data-testid=mobile-topbar) dan di baris judul (data-testid=current-user) — redundan dan membuat baris judul mepet tepi kanan. Saran: sembunyikan .current-user (d-none d-md-inline) di mobile."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_smoke_pages.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": ["Opsional (kosmetik): sembunyikan data-testid=current-year/current-user duplikat di viewport mobile agar baris judul lebih rapi"],
+  "critical_code_review_comments": ["header.php JS aman (DOMContentLoaded, null-check btnOpen/btnClose/overlay). Catatan kecil: sidebar.querySelectorAll dipanggil tanpa null-check pada `sidebar` — jika markup berubah akan throw; tambahkan guard `if (!sidebar) return;`."],
+  "updated_files": ["/app/backend/tests/test_smoke_pages.py"],
+  "success_rate": {"backend": "100% (14/14 halaman 200 OK)", "frontend": "100% (semua kriteria responsive lolos)"},
+  "seed_data_creation": "Tidak ada data baru dibuat",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin / admin123",
+  "context_for_next_testing_agent": "Off-canvas mobile nav sudah terverifikasi penuh (mobile 320-430, tablet 768/991, desktop 1440/1920). Smoke test halaman ada di /app/backend/tests/test_smoke_pages.py (pakai requests + session login). Satu-satunya temuan tersisa: duplikasi info user di mobile (kosmetik).",
+  "rca_of_the_issue": "Bug lama (sidebar memanjang vertikal di atas konten pada mobile) disebabkan sidebar memakai kolom Bootstrap tanpa breakpoint mobile sehingga menjadi blok full-width. Fix di header.php (@media max-width:767.98px position fixed + translateX(-105%) + overlay + hamburger) terbukti menyelesaikan masalah tanpa mengubah layout >=768px."
+}

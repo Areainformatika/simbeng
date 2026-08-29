@@ -38,6 +38,7 @@ Aplikasi web manajemen bengkel motor: PHP native + SQLite (bengkel.db auto-creat
 - Upload logo bengkel di Pengaturan (JPG/PNG/WEBP/GIF maks 2MB -> uploads/), tampil di sidebar/login/nota/bukti garansi.
 - Sticky Notes (pages/notes.php): catatan warna-warni (5 warna), tambah/edit/hapus, timestamp WIB.
 - Bugfix kritikal: next_kode() memakai MAX nomor urut (bukan COUNT) — POS/GRS aman terhadap penghapusan baris; PRG redirect diperbaiki via ob_start() di index.php; upload logo menangani semua error code (>2MB diberi pesan jelas); nama file logo random hex; data uji TEST_* dibersihkan dari database.
+- Responsive mobile navigation: off-canvas sidebar <768px (hamburger + overlay + tombol X + auto-close saat pilih menu, fixed 100vh scrollable, z-1050, tanpa horizontal scroll); desktop/tablet >=768px tidak berubah. Hanya includes/header.php yang diubah.
 - Auth multi-user (admin/kasir/mekanik), seed admin/admin123.
 - AJAX: lookup kendaraan per pelanggan, pencarian nota untuk garansi, import Excel via SheetJS.
 - Barcode: kamera HP (html5-qrcode) + scanner USB (keyboard input) di halaman Sparepart & POS.
