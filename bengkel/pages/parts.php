@@ -55,6 +55,8 @@ if (isset($_GET['edit'])) {
     $s = $db->prepare("SELECT * FROM parts WHERE id=?"); $s->execute([(int)$_GET['edit']]);
     $edit = $s->fetch(PDO::FETCH_ASSOC);
 }
+// Master kategori untuk dropdown pada form input sparepart
+$categories = $db->query("SELECT nama FROM categories ORDER BY nama")->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <div class="row g-3">
   <div class="col-lg-4">
@@ -70,9 +72,15 @@ if (isset($_GET['edit'])) {
             <input name="barcode" id="part-barcode" class="form-control form-control-sm" value="<?= esc($edit['barcode'] ?? '') ?>" data-testid="part-barcode"></div>
           <div class="col-12 mb-2"><label class="form-label small">Nama Barang</label>
             <input name="nama" class="form-control form-control-sm" required value="<?= esc($edit['nama'] ?? '') ?>" data-testid="part-nama"></div>
-          <div class="col-12 mb-2"><label class="form-label small">Kategori</label>
-            <input name="kategori" class="form-control form-control-sm" list="kategoriList" value="<?= esc($edit['kategori'] ?? '') ?>" placeholder="Oli, Kampas, Busi, Aki..." data-testid="part-kategori">
-            <datalist id="kategoriList"><option>Oli</option><option>Kampas Rem</option><option>Busi</option><option>Aki</option><option>Ban</option><option>Rantai & Gir</option><option>Lampu</option><option>Lainnya</option></datalist></div>
+          <div class="col-12 mb-2"><label class="form-label small">Kategori <a href="index.php?page=categories" class="text-decoration-none">(kelola kategori)</a></label>
+            <select name="kategori" class="form-select form-select-sm" data-testid="part-kategori">
+              <option value="">- Tanpa kategori -</option>
+              <?php $katEdit = $edit['kategori'] ?? ''; $katAda = in_array($katEdit, $categories, true); ?>
+              <?php foreach ($categories as $cat): ?>
+              <option value="<?= esc($cat) ?>" <?= $katEdit === $cat ? 'selected' : '' ?>><?= esc($cat) ?></option>
+              <?php endforeach; ?>
+              <?php if ($katEdit !== '' && !$katAda): ?><option value="<?= esc($katEdit) ?>" selected><?= esc($katEdit) ?> (lama)</option><?php endif; ?>
+            </select></div>
           <div class="col-6 mb-2"><label class="form-label small">Harga Beli</label>
             <input name="harga_beli" type="number" min="0" class="form-control form-control-sm" value="<?= esc($edit['harga_beli'] ?? 0) ?>" data-testid="part-harga-beli"></div>
           <div class="col-6 mb-2"><label class="form-label small">Harga Jual</label>
@@ -98,6 +106,11 @@ if (isset($_GET['edit'])) {
 
   <div class="col-lg-8">
     <div class="card table-card"><div class="card-body">
+      <div class="d-flex justify-content-end gap-1 mb-2" data-testid="parts-export-buttons">
+        <a class="btn btn-sm btn-outline-danger" target="_blank" href="export.php?type=parts&format=pdf" data-testid="parts-export-pdf"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+        <a class="btn btn-sm btn-outline-success" href="export.php?type=parts&format=xls" data-testid="parts-export-xls"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+        <a class="btn btn-sm btn-outline-primary" href="export.php?type=parts&format=doc" data-testid="parts-export-doc"><i class="bi bi-file-earmark-word me-1"></i>Word</a>
+      </div>
       <form class="d-flex mb-3" method="get">
         <input type="hidden" name="page" value="parts">
         <input name="q" class="form-control form-control-sm me-2" placeholder="Cari nama / kode / barcode..." value="<?= esc($q) ?>" data-testid="part-search">

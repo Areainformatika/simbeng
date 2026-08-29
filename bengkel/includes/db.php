@@ -114,11 +114,26 @@ function init_db(): void {
         created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     )");
+    // Master kategori jenis sparepart (dipakai dropdown saat input sparepart)
+    $db->exec("CREATE TABLE IF NOT EXISTS categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama TEXT UNIQUE NOT NULL,
+        keterangan TEXT DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    )");
 
     // Seed akun admin default (admin / admin123) jika tabel users kosong
     if ((int) db()->query("SELECT COUNT(*) FROM users")->fetchColumn() === 0) {
         $stmt = db()->prepare("INSERT INTO users (username, password_hash, nama, role) VALUES (?,?,?,?)");
         $stmt->execute(['admin', password_hash('admin123', PASSWORD_DEFAULT), 'Administrator', 'admin']);
+    }
+
+    // Seed kategori default + serap kategori yang sudah dipakai data sparepart lama
+    if ((int) db()->query("SELECT COUNT(*) FROM categories")->fetchColumn() === 0) {
+        $defaults = ['Oli', 'Kampas Rem', 'Busi', 'Aki', 'Ban', 'Rantai & Gir', 'Lampu', 'Lainnya'];
+        $existing = db()->query("SELECT DISTINCT kategori FROM parts WHERE kategori != ''")->fetchAll(PDO::FETCH_COLUMN);
+        $ins = db()->prepare("INSERT OR IGNORE INTO categories (nama) VALUES (?)");
+        foreach (array_unique(array_merge($defaults, $existing)) as $k) $ins->execute([$k]);
     }
 }
 
@@ -134,4 +149,62 @@ function next_kode(string $prefix, string $table, string $col): string {
     $stmt = db()->prepare("SELECT COUNT(*) FROM $table WHERE $col LIKE ?");
     $stmt->execute(["$prefix-$ym-%"]);
     return sprintf('%s-%s-%03d', $prefix, $ym, ((int)$stmt->fetchColumn()) + 1);
+}
+
+// ============================================================
+// Helper laporan: hitung rentang tanggal dari parameter periode
+// (harian / mingguan / bulanan / tahunan / custom dari-sampai)
+// ============================================================
+// Validasi format tanggal Y-m-d (fallback dipakai bila input tidak valid)
+function _valid_date($d): bool {
+    return is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && strtotime($d) !== false;
+}
+
+function resolve_periode(): array {
+    $periode = $_GET['periode'] ?? 'harian';
+    $today = date('Y-m-d');
+    switch ($periode) {
+        case 'mingguan':
+            $base = _valid_date($_GET['tanggal'] ?? '') ? $_GET['tanggal'] : $today;
+            $dari = date('Y-m-d', strtotime('monday this week', strtotime($base)));
+            $sampai = date('Y-m-d', strtotime('sunday this week', strtotime($base)));
+            $label = 'Mingguan (' . date('d/m/Y', strtotime($dari)) . ' - ' . date('d/m/Y', strtotime($sampai)) . ')';
+            break;
+        case 'bulanan':
+            $bulan = preg_match('/^\d{4}-\d{2}$/', $_GET['bulan'] ?? '') ? $_GET['bulan'] : date('Y-m');
+            $dari = $bulan . '-01';
+            $sampai = date('Y-m-t', strtotime($dari));
+            $label = 'Bulanan (' . date('m/Y', strtotime($dari)) . ')';
+            break;
+        case 'tahunan':
+            $tahun = preg_match('/^\d{4}$/', $_GET['tahun'] ?? '') ? $_GET['tahun'] : date('Y');
+            $dari = "$tahun-01-01";
+            $sampai = "$tahun-12-31";
+            $label = "Tahunan ($tahun)";
+            break;
+        case 'custom':
+            $dari = _valid_date($_GET['dari'] ?? '') ? $_GET['dari'] : $today;
+            $sampai = _valid_date($_GET['sampai'] ?? '') ? $_GET['sampai'] : $today;
+            // Tukar otomatis bila pengguna memasukkan rentang terbalik
+            if ($dari > $sampai) [$dari, $sampai] = [$sampai, $dari];
+            $label = date('d/m/Y', strtotime($dari)) . ' s.d. ' . date('d/m/Y', strtotime($sampai));
+            break;
+        default: // harian
+            $periode = 'harian';
+            $dari = $sampai = _valid_date($_GET['tanggal'] ?? '') ? $_GET['tanggal'] : $today;
+            $label = 'Harian (' . date('d/m/Y', strtotime($dari)) . ')';
+    }
+    return [$periode, $dari, $sampai, $label];
+}
+
+// Ambil daftar transaksi dalam rentang tanggal untuk laporan
+function laporan_transaksi(string $dari, string $sampai): array {
+    $stmt = db()->prepare("SELECT t.*, c.nama AS customer_nama, v.plat_nomor
+        FROM transactions t
+        JOIN customers c ON c.id = t.customer_id
+        LEFT JOIN vehicles v ON v.id = t.vehicle_id
+        WHERE date(t.created_at) BETWEEN ? AND ?
+        ORDER BY t.created_at");
+    $stmt->execute([$dari, $sampai]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

@@ -1,0 +1,43 @@
+{
+  "summary": "Iterasi 2 (PHP native + SQLite, /app/bengkel via preview URL) ditest end-to-end: Master Kategori CRUD + validasi duplikat, dropdown kategori pada form sparepart (create + pre-select saat edit), auto-create kategori saat import ajax/import_parts.php, halaman Rekap & Laporan (filter harian/mingguan/bulanan/tahunan/custom + ringkasan divalidasi terhadap query SQLite langsung), export.php 3 format (xls/doc/pdf print-view) untuk type=transactions dan type=parts, export menghormati filter, proteksi login export.php, serta regresi (login, dashboard, POS buat transaksi baru, sidebar nav baru). Backend: 19 tes baru di test_iter2_features.py PASS + full suite regresi 65/65 PASS. Frontend Playwright: seluruh flow kategori (tambah/edit/duplikat/hapus), dropdown kategori, JS toggle input periode, filter bulanan, dan 5 tombol unduh (report xls/doc/pdf, parts xls/doc) PASS. Tidak ada issue blocking ditemukan.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "index.php?page=reports & export.php (resolve_periode)", "issue": "Parameter tanggal tidak divalidasi: ?periode=harian&tanggal=abcd menghasilkan label 'Harian (01/01/1970)' dan laporan kosong, bukannya fallback ke hari ini. Tidak error/500, hanya membingungkan."},
+      {"endpoint": "index.php?page=reports (periode=custom)", "issue": "Tidak ada validasi dari>sampai; ?dari=2026-08-31&sampai=2026-08-01 menampilkan 0 transaksi tanpa pesan peringatan."},
+      {"endpoint": "export.php?type=<tidak dikenal>", "issue": "type tak dikenal (mis. type=zzz) silent fallback ke laporan transaksi; format tak dikenal (format=exe) fallback ke print-view PDF. Aman, tapi sebaiknya divalidasi."},
+      {"endpoint": "index.php?page=categories (action=save, nama kosong)", "issue": "Nama kosong/whitespace di-skip tanpa flash message apa pun, sehingga user tidak tahu penyimpanan gagal (hanya dicegah oleh atribut required di sisi klien)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Rekap & Laporan", "issues": ["Kolom filter 'Tanggal/Bulan/Tahun' disembunyikan via display:none sehingga tombol Tampilkan berpindah posisi antar periode (kosmetik, fungsi tetap benar)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter2_features.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_edge_cases.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Opsional: validasi format parameter tanggal/dari/sampai pada resolve_periode() (fallback ke hari ini bila invalid) dan tukar nilai bila dari > sampai",
+    "Opsional: whitelist parameter type & format di export.php",
+    "Opsional: flash error saat nama kategori kosong dikirim"
+  ],
+  "critical_code_review_comments": [
+    "export.php membangun link dengan http_build_query(array_merge($_GET, ...)) sehingga seluruh query string (termasuk page=reports) terbawa; aman karena semua nilai di-esc, namun sebaiknya whitelist key filter saja",
+    "Semua query kategori/laporan memakai prepared statement — uji injeksi pada ?bulan=2026-08' OR 1=1-- tidak berdampak (regex validasi bekerja)",
+    "Hapus kategori tidak mengubah nilai kategori pada parts (orphan string). Perilaku ini disengaja & diinformasikan lewat flash; dropdown edit menampilkan opsi '(lama)' sehingga tidak ada kehilangan data"
+  ],
+  "updated_files": ["/app/backend/tests/test_iter2_features.py"],
+  "success_rate": {"backend": "100% (65/65 termasuk 19 tes fitur baru)", "frontend": "100% flow inti (kategori CRUD, dropdown, filter periode, 5 tombol export)"},
+  "seed_data_creation": "Data uji bertanda TEST_/UI dibuat & dibersihkan oleh test (kategori TEST_KAT_*, sparepart TEST-PC/TEST-DD/TEST-IMP, pelanggan TEST_R2_Cust_*, 1 transaksi jasa Rp 50.000 per run). Kategori TEST_KATCNT_*/TEST_IMPKAT_* sengaja dibiarkan agar tetap tampil di master kategori.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin / admin123 (dari /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Tanggal server saat test: 2026-08-29. Tes fitur iterasi 2 ada di /app/backend/tests/test_iter2_features.py (pola: session requests login POST index.php?page=login + verifikasi langsung ke SQLite /app/bengkel/bengkel.db). pytest.ini memakai xdist loadscope -> tiap kelas harus mandiri. Catatan selector: tombol submit form sparepart adalah [data-testid=\"part-submit\"] (bukan button[type=submit]). Export PDF membuka tab baru (print-view HTML), xls/doc memicu download; gunakan page.expect_download / context.expect_page. Data laporan bulan 08/2026 saat test: 16 transaksi, total Rp 1.315.000.",
+  "rca_of_the_issue": "Tidak ada kegagalan aplikasi. Satu kegagalan awal di skrip Playwright disebabkan selector tes yang salah (form[data-testid=part-form] button[type=submit]) dan sudah diperbaiki memakai [data-testid=\"part-submit\"]."
+}

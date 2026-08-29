@@ -29,9 +29,14 @@ foreach ($rows as $r) {
     $kode = strtoupper(trim((string)($row['kode'] ?? '')));
     $nama = trim((string)($row['nama'] ?? ''));
     if ($kode === '' || $nama === '') { $skipped++; continue; }
+    $kategori = trim((string)($row['kategori'] ?? ''));
+    // Kategori baru dari file import otomatis terdaftar di master kategori
+    if ($kategori !== '') {
+        $db->prepare("INSERT OR IGNORE INTO categories (nama) VALUES (?)")->execute([$kategori]);
+    }
     $vals = [
         $nama,
-        trim((string)($row['kategori'] ?? '')),
+        $kategori,
         (float)($row['harga_beli'] ?? 0),
         (float)($row['harga_jual'] ?? 0),
         (int)($row['stok'] ?? 0),

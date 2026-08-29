@@ -29,8 +29,10 @@
       <li><a class="nav-link <?= $page==='dashboard'?'active':'' ?>" href="index.php" data-testid="nav-dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
       <li><a class="nav-link <?= $page==='pos'?'active':'' ?>" href="index.php?page=pos" data-testid="nav-pos"><i class="bi bi-cash-register me-2"></i>Kasir / Servis</a></li>
       <li><a class="nav-link <?= $page==='transactions'?'active':'' ?>" href="index.php?page=transactions" data-testid="nav-transactions"><i class="bi bi-receipt me-2"></i>Riwayat Transaksi</a></li>
+      <li><a class="nav-link <?= $page==='reports'?'active':'' ?>" href="index.php?page=reports" data-testid="nav-reports"><i class="bi bi-file-earmark-bar-graph me-2"></i>Rekap & Laporan</a></li>
       <li><a class="nav-link <?= $page==='customers'?'active':'' ?>" href="index.php?page=customers" data-testid="nav-customers"><i class="bi bi-people me-2"></i>Pelanggan</a></li>
       <li><a class="nav-link <?= $page==='parts'?'active':'' ?>" href="index.php?page=parts" data-testid="nav-parts"><i class="bi bi-box-seam me-2"></i>Sparepart</a></li>
+      <li><a class="nav-link <?= $page==='categories'?'active':'' ?>" href="index.php?page=categories" data-testid="nav-categories"><i class="bi bi-tags me-2"></i>Kategori</a></li>
       <li><a class="nav-link <?= $page==='stock'?'active':'' ?>" href="index.php?page=stock" data-testid="nav-stock"><i class="bi bi-arrow-left-right me-2"></i>Stok Masuk/Keluar</a></li>
       <li><a class="nav-link <?= $page==='suppliers'?'active':'' ?>" href="index.php?page=suppliers" data-testid="nav-suppliers"><i class="bi bi-truck me-2"></i>Supplier</a></li>
       <li><a class="nav-link <?= $page==='warranty'?'active':'' ?>" href="index.php?page=warranty" data-testid="nav-warranty"><i class="bi bi-shield-check me-2"></i>Klaim Garansi</a></li>
