@@ -60,6 +60,9 @@ $items = $items->fetchAll(PDO::FETCH_ASSOC);
   <table>
     <tr><td>Jasa</td><td class="text-end"><?= number_format($t['total_jasa'], 0, ',', '.') ?></td></tr>
     <tr><td>Sparepart</td><td class="text-end"><?= number_format($t['total_part'], 0, ',', '.') ?></td></tr>
+    <?php if ((float)($t['diskon'] ?? 0) > 0): ?>
+    <tr><td>Diskon</td><td class="text-end">-<?= number_format($t['diskon'], 0, ',', '.') ?></td></tr>
+    <?php endif; ?>
     <tr><td><strong>TOTAL</strong></td><td class="text-end"><strong><?= rupiah($t['grand_total']) ?></strong></td></tr>
   </table>
   <hr>

@@ -1,5 +1,35 @@
 <?php
 $db = db();
+
+// ---- Hapus transaksi: stok sparepart dikembalikan, jejak pergerakan dihapus ----
+if (($_POST['action'] ?? '') === 'delete') {
+    $id = (int)$_POST['id'];
+    // Tolak hapus bila ada klaim garansi yang terkait transaksi ini
+    $klaim = $db->prepare("SELECT COUNT(*) FROM warranty_claims WHERE transaction_id=?");
+    $klaim->execute([$id]);
+    if ((int)$klaim->fetchColumn() > 0) {
+        set_flash('danger', 'Transaksi tidak dapat dihapus karena memiliki klaim garansi terkait.');
+        header('Location: index.php?page=transactions'); exit;
+    }
+    $db->beginTransaction();
+    try {
+        $items = $db->prepare("SELECT part_id, qty FROM transaction_items WHERE transaction_id=? AND tipe='part'");
+        $items->execute([$id]);
+        foreach ($items->fetchAll(PDO::FETCH_ASSOC) as $it) {
+            $db->prepare("UPDATE parts SET stok = stok + ? WHERE id=?")->execute([$it['qty'], $it['part_id']]);
+        }
+        $db->prepare("DELETE FROM stock_movements WHERE ref_type='penjualan' AND ref_id=?")->execute([$id]);
+        $db->prepare("DELETE FROM transaction_items WHERE transaction_id=?")->execute([$id]);
+        $db->prepare("DELETE FROM transactions WHERE id=?")->execute([$id]);
+        $db->commit();
+        set_flash('success', 'Transaksi dihapus dan stok sparepart dikembalikan.');
+    } catch (Exception $e) {
+        $db->rollBack();
+        set_flash('danger', 'Gagal menghapus transaksi: ' . $e->getMessage());
+    }
+    header('Location: index.php?page=transactions'); exit;
+}
+
 $q = trim($_GET['q'] ?? '');
 $dari = $_GET['dari'] ?? '';
 $sampai = $_GET['sampai'] ?? '';
@@ -8,8 +38,8 @@ $sql = "SELECT t.*, c.nama AS customer_nama, v.plat_nomor FROM transactions t
         JOIN customers c ON c.id=t.customer_id LEFT JOIN vehicles v ON v.id=t.vehicle_id";
 $where = []; $params = [];
 if ($q !== '') { $where[] = "(t.no_nota LIKE ? OR c.nama LIKE ? OR v.plat_nomor LIKE ?)"; $params = array_merge($params, ["%$q%","%$q%","%$q%"]); }
-if ($dari !== '') { $where[] = "date(t.created_at) >= ?"; $params[] = $dari; }
-if ($sampai !== '') { $where[] = "date(t.created_at) <= ?"; $params[] = $sampai; }
+if ($dari !== '') { $where[] = "date(t.created_at,'+7 hours') >= ?"; $params[] = $dari; }
+if ($sampai !== '') { $where[] = "date(t.created_at,'+7 hours') <= ?"; $params[] = $sampai; }
 if ($where) $sql .= " WHERE " . implode(' AND ', $where);
 $sql .= " ORDER BY t.id DESC LIMIT 200";
 $stmt = $db->prepare($sql); $stmt->execute($params);
@@ -38,7 +68,14 @@ $total = array_sum(array_column($rows, 'grand_total'));
         <td class="text-end"><?= rupiah($r['total_part']) ?></td>
         <td class="text-end fw-semibold"><?= rupiah($r['grand_total']) ?></td>
         <td class="small"><?= esc(lokal($r['created_at'])) ?></td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="index.php?page=receipt&id=<?= $r['id'] ?>" data-testid="trx-receipt-<?= $r['id'] ?>"><i class="bi bi-printer"></i></a></td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-outline-primary" href="index.php?page=receipt&id=<?= $r['id'] ?>" title="Cetak Nota" data-testid="trx-receipt-<?= $r['id'] ?>"><i class="bi bi-printer"></i></a>
+          <a class="btn btn-sm btn-outline-warning" href="index.php?page=pos&edit=<?= $r['id'] ?>" title="Edit Transaksi" data-testid="trx-edit-<?= $r['id'] ?>"><i class="bi bi-pencil"></i></a>
+          <form method="post" class="d-inline" onsubmit="return confirm('Hapus transaksi ini? Stok sparepart yang terpakai akan dikembalikan.')">
+            <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $r['id'] ?>">
+            <button class="btn btn-sm btn-outline-danger" title="Hapus Transaksi" data-testid="trx-delete-<?= $r['id'] ?>"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
       </tr>
     <?php endforeach; ?>
     </tbody>

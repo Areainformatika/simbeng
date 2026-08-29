@@ -84,6 +84,7 @@ function init_db(): void {
         vehicle_id INTEGER REFERENCES vehicles(id),
         total_jasa REAL NOT NULL DEFAULT 0,
         total_part REAL NOT NULL DEFAULT 0,
+        diskon REAL NOT NULL DEFAULT 0,
         grand_total REAL NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'selesai',
         catatan TEXT DEFAULT '',
@@ -156,6 +157,12 @@ function init_db(): void {
     ];
     $ins = db()->prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
     foreach ($setting_defaults as $k => $v) $ins->execute([$k, $v]);
+
+    // Migrasi DB lama: tambahkan kolom diskon pada tabel transactions bila belum ada
+    $cols = db()->query("PRAGMA table_info(transactions)")->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('diskon', $cols, true)) {
+        db()->exec("ALTER TABLE transactions ADD COLUMN diskon REAL NOT NULL DEFAULT 0");
+    }
 }
 
 // ---------- Helper umum ----------

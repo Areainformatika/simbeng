@@ -31,6 +31,9 @@ Aplikasi web manajemen bengkel motor: PHP native + SQLite (bengkel.db auto-creat
 - Export laporan (export.php): transaksi & daftar sparepart dalam format Excel (.xls), Word (.doc), PDF (print-view Save as PDF) — tanpa library eksternal agar tetap kompatibel cPanel/XAMPP.
 - Pengaturan (pages/settings.php, admin): identitas bengkel (nama, NIB, pemilik, alamat, telepon) tampil di sidebar/login/nota/bukti garansi/laporan; tema warna gradasi via slider hue + live preview + preset, tersimpan di tabel settings.
 - Perbaikan waktu cetakan: timestamp nota/bukti garansi/laporan dikonversi UTC→WIB (helper lokal()), ditambah "Waktu Cetak" realtime mengikuti jam perangkat (JS toLocaleString, tick tiap detik).
+- Export laporan stok (export.php?type=stock): filter jenis (semua/masuk/keluar/penjualan/garansi) + rentang tanggal, format PDF/Excel/Word, tombol unduh di halaman Stok Masuk/Keluar.
+- Diskon POS: nominal Rp / persen % sebelum simpan, tersimpan di kolom transactions.diskon (migrasi otomatis), tampil di struk nota & mempengaruhi grand total.
+- Edit & hapus transaksi di Riwayat: edit memakai form kasir terisi (stok lama dikembalikan lalu dihitung ulang, nota tetap), hapus mengembalikan stok & menghapus movement; keduanya ditolak bila transaksi punya klaim garansi.
 - Auth multi-user (admin/kasir/mekanik), seed admin/admin123.
 - AJAX: lookup kendaraan per pelanggan, pencarian nota untuk garansi, import Excel via SheetJS.
 - Barcode: kamera HP (html5-qrcode) + scanner USB (keyboard input) di halaman Sparepart & POS.

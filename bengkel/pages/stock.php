@@ -101,7 +101,24 @@ $log = $db->query("SELECT sm.*, p.kode, p.nama AS part_nama, s.nama AS supplier_
 
   <div class="col-lg-8">
     <div class="card table-card"><div class="card-body">
-      <h2 class="h6 mb-3">Riwayat Pergerakan Stok (50 terakhir)</h2>
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2 class="h6 mb-0">Riwayat Pergerakan Stok (50 terakhir)</h2>
+        <form class="d-flex gap-1 flex-wrap align-items-center" method="get" action="export.php" target="_blank" data-testid="stock-export-form">
+          <input type="hidden" name="type" value="stock">
+          <select name="jenis" class="form-select form-select-sm" style="width:auto" data-testid="stock-export-jenis">
+            <option value="semua">Semua</option>
+            <option value="masuk">Stok Masuk</option>
+            <option value="keluar">Stok Keluar</option>
+            <option value="penjualan">Penjualan</option>
+            <option value="garansi">Garansi</option>
+          </select>
+          <input type="date" name="dari" class="form-control form-control-sm" style="width:auto" value="<?= date('Y-m-01') ?>" data-testid="stock-export-dari">
+          <input type="date" name="sampai" class="form-control form-control-sm" style="width:auto" value="<?= date('Y-m-d') ?>" data-testid="stock-export-sampai">
+          <button name="format" value="pdf" class="btn btn-sm btn-outline-danger" title="Unduh PDF" data-testid="stock-export-pdf"><i class="bi bi-file-earmark-pdf"></i></button>
+          <button name="format" value="xls" class="btn btn-sm btn-outline-success" title="Unduh Excel" data-testid="stock-export-xls"><i class="bi bi-file-earmark-excel"></i></button>
+          <button name="format" value="doc" class="btn btn-sm btn-outline-primary" title="Unduh Word" data-testid="stock-export-doc"><i class="bi bi-file-earmark-word"></i></button>
+        </form>
+      </div>
       <div class="table-responsive">
       <table class="table table-sm align-middle" data-testid="stock-log-table">
         <thead><tr><th>Tanggal</th><th>Barang</th><th>Tipe</th><th class="text-end">Jumlah</th><th>Supplier/Sumber</th><th>Keterangan</th></tr></thead>

@@ -14,7 +14,7 @@ init_db();
 $type   = $_GET['type'] ?? 'transactions';
 $format = $_GET['format'] ?? 'xls';
 // Whitelist parameter agar nilai tak dikenal tidak diproses sembarangan
-if (!in_array($type, ['transactions', 'parts'], true)) $type = 'transactions';
+if (!in_array($type, ['transactions', 'parts', 'stock'], true)) $type = 'transactions';
 if (!in_array($format, ['xls', 'doc', 'pdf'], true)) $format = 'pdf';
 [, $dari, $sampai, $label] = resolve_periode();
 
@@ -33,6 +33,37 @@ if ($type === 'parts') {
     }
     $footer = null;
     $fname = 'daftar_sparepart_' . date('Ymd');
+} elseif ($type === 'stock') {
+    // ---- Laporan pergerakan stok: masuk / keluar / penjualan / garansi ----
+    $jenis = $_GET['jenis'] ?? 'semua';
+    $dari = _valid_date($_GET['dari'] ?? '') ? $_GET['dari'] : date('Y-m-01');
+    $sampai = _valid_date($_GET['sampai'] ?? '') ? $_GET['sampai'] : date('Y-m-d');
+    if ($dari > $sampai) [$dari, $sampai] = [$sampai, $dari];
+    $where = "date(sm.created_at, '+7 hours') BETWEEN ? AND ?";
+    $params = [$dari, $sampai];
+    $labelJenis = 'Semua Pergerakan';
+    if ($jenis === 'masuk') { $where .= " AND sm.tipe='masuk'"; $labelJenis = 'Stok Masuk'; }
+    elseif ($jenis === 'keluar') { $where .= " AND sm.tipe='keluar'"; $labelJenis = 'Stok Keluar'; }
+    elseif ($jenis === 'penjualan') { $where .= " AND sm.ref_type='penjualan'"; $labelJenis = 'Penjualan (Kasir)'; }
+    elseif ($jenis === 'garansi') { $where .= " AND sm.ref_type='garansi'"; $labelJenis = 'Penggantian Garansi'; }
+    $stmt = db()->prepare("SELECT sm.*, p.kode, p.nama AS part_nama, s.nama AS supplier_nama
+        FROM stock_movements sm
+        JOIN parts p ON p.id = sm.part_id
+        LEFT JOIN suppliers s ON s.id = sm.supplier_id
+        WHERE $where ORDER BY sm.created_at");
+    $stmt->execute($params);
+    $judul = 'Laporan Stok — ' . $labelJenis;
+    $subjudul = 'Periode: ' . date('d/m/Y', strtotime($dari)) . ' s.d. ' . date('d/m/Y', strtotime($sampai));
+    $headers = ['No','Tanggal','Kode','Nama Barang','Tipe','Sumber','Jumlah','Supplier','Keterangan'];
+    $data = [];
+    $no = 1; $tj = 0;
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $tj += (int)$r['jumlah'];
+        $data[] = [$no++, lokal($r['created_at']), $r['kode'], $r['part_nama'], strtoupper($r['tipe']),
+                   $r['ref_type'] ? ucfirst($r['ref_type']) : 'Manual', $r['jumlah'], $r['supplier_nama'] ?: '-', $r['keterangan']];
+    }
+    $footer = ['', 'TOTAL', '', '', '', '', (string)$tj, '', ''];
+    $fname = 'laporan_stok_' . $jenis . '_' . $dari . '_sd_' . $sampai;
 } else {
     $judul = 'Laporan Transaksi';
     $subjudul = 'Periode: ' . $label;

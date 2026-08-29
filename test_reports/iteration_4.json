@@ -1,0 +1,45 @@
+{
+  "summary": "Iterasi 4 diuji end-to-end (backend + UI). Dibuat suite baru /app/backend/tests/test_iter4_features.py (25 test: export laporan stok xls/doc/pdf dengan 5 filter jenis + rentang tanggal & verifikasi jumlah baris/TOTAL langsung terhadap SQLite stock_movements, diskon POS persen/nominal/cap/negatif/tanpa diskon + isi struk, edit transaksi (prefill, no nota tetap, stok = stok_lama+qty_lama-qty_baru, tepat 1 movement penjualan), edit melebihi stok ditolak, hapus mengembalikan stok, edit & hapus ditolak bila ada klaim garansi, dashboard pendapatan memakai grand_total net). Seluruh regresi 102 test (4 suite lama + baru) PASS. UI diuji dengan Playwright: login, form export stok (popup print-view PDF + download .xls/.doc), hitung diskon realtime, submit, struk dengan baris Diskon, tombol Edit/Hapus di Riwayat Transaksi termasuk dialog konfirmasi. Semua flow lulus; stok sparepart kembali persis ke nilai awal (20) setelah hapus.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Kasir/Servis (mode edit)",
+        "issues": [
+          "Saat edit transaksi yang vehicle_id NULL, dropdown Kendaraan tetap menampilkan '- Pilih pelanggan dulu -' dan kosong (AJAX vehicles hanya dipanggil bila vehicle_id ada). Pengguna harus memilih ulang pelanggan agar daftar kendaraan muncul — sebaiknya selalu muat daftar kendaraan pelanggan pada mode edit.",
+          "Baris jasa & sparepart yang dibuat dinamis (input jasa_nama[]/jasa_biaya[]/part_id[]/part_qty[]) tidak punya data-testid; test harus memakai selector name[]. Menambahkan data-testid berindeks akan mempermudah otomasi."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter4_features.py",
+    "/app/test_reports/pytest/pytest_results_iter4.xml"
+  ],
+  "action_items": [
+    "Opsional (kosmetik): muat daftar kendaraan pelanggan pada mode edit meski transaksi lama tanpa kendaraan.",
+    "Opsional: tambahkan data-testid pada baris jasa/sparepart dinamis di pos.php.",
+    "Opsional: bersihkan data sisa uji (TEST_Pelanggan_*, TEST_P-*) di bengkel.db sebelum handover ke user."
+  ],
+  "critical_code_review_comments": [
+    "export.php type=stock: filter jenis di-whitelist lewat if/elseif dan tanggal divalidasi _valid_date, tanggal dibalik bila dari>sampai — aman terhadap injeksi (diuji dengan payload \"'; DROP TABLE parts;--\", tabel parts utuh).",
+    "pos.php mode edit: pengembalian stok, penghapusan movement/item lama, dan penulisan ulang dilakukan dalam satu transaksi DB dengan rollback — konsisten. Validasi stok memakai stok+qty_lama sehingga edit qty sama tidak salah tolak.",
+    "Diskon dihitung ulang di server (cap 0..subtotal dan 0..100%), tidak percaya nilai dari client — benar.",
+    "Catatan minor: pos.php sudah ~324 baris dengan handler POST + view + JS dalam satu file; bila fitur bertambah lagi sebaiknya handler dipisah ke includes/."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter4_features.py"
+  ],
+  "success_rate": {"backend": "100% (102/102 termasuk regresi iterasi 1-3)", "frontend": "100% (semua flow UI iterasi 4 lulus)"},
+  "seed_data_creation": "Sementara: customer 'TEST_Pelanggan_Iter4' + part 'TESTP4' (dibuat/dihapus oleh fixture pytest), serta 'UITEST Pelanggan' + part 'UITESTP' untuk uji Playwright — keduanya sudah dihapus dan stok diverifikasi kembali ke 20.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin / admin123 (dari /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Jalankan pytest dengan -n0 (pytest.ini memakai -n 2, aman juga). PENTING: saat menulis test yang menyentuh SQLite langsung, selalu tutup koneksi di finally — koneksi python yang bocor karena exception (mis. CHECK constraint warranty_claims.status hanya menerima pending/diproses/disetujui/ditolak) mengunci bengkel.db dan membuat semua request PHP timeout (ini penyebab 3 kegagalan awal saya, bukan bug aplikasi). Semua fitur iterasi 4 terverifikasi; belum diuji: cetak PDF aktual (dialog print browser) dan skenario multi-baris sparepart pada mode edit.",
+  "rca_of_the_issue": "Tidak ada bug aplikasi ditemukan. Kegagalan awal (3 test ReadTimeout) berasal dari test saya sendiri: INSERT warranty_claims dengan status 'diajukan' melanggar CHECK constraint, exception meninggalkan koneksi sqlite terbuka sehingga bengkel.db terkunci dan PHP built-in server (single-threaded) menggantung. Diperbaiki dengan status 'pending' + penutupan koneksi di blok finally; setelah itu 25/25 test lulus."
+}
