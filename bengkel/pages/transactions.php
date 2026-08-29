@@ -37,7 +37,7 @@ $total = array_sum(array_column($rows, 'grand_total'));
         <td class="text-end"><?= rupiah($r['total_jasa']) ?></td>
         <td class="text-end"><?= rupiah($r['total_part']) ?></td>
         <td class="text-end fw-semibold"><?= rupiah($r['grand_total']) ?></td>
-        <td class="small"><?= esc($r['created_at']) ?></td>
+        <td class="small"><?= esc(lokal($r['created_at'])) ?></td>
         <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="index.php?page=receipt&id=<?= $r['id'] ?>" data-testid="trx-receipt-<?= $r['id'] ?>"><i class="bi bi-printer"></i></a></td>
       </tr>
     <?php endforeach; ?>

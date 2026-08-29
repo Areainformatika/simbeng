@@ -34,6 +34,7 @@ $routes = [
     'warranty'       => 'Klaim Garansi',
     'warranty_print' => 'Bukti Klaim Garansi',
     'users'          => 'Manajemen Pengguna',
+    'settings'       => 'Pengaturan',
 ];
 if (!isset($routes[$page])) $page = 'dashboard';
 

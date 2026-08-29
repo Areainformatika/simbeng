@@ -82,7 +82,7 @@ $export_qs = http_build_query(array_merge(
       <tr>
         <td><?= $i + 1 ?></td>
         <td><a href="index.php?page=receipt&id=<?= $r['id'] ?>"><?= esc($r['no_nota']) ?></a></td>
-        <td class="small"><?= esc($r['created_at']) ?></td>
+        <td class="small"><?= esc(lokal($r['created_at'])) ?></td>
         <td><?= esc($r['customer_nama']) ?></td>
         <td><?= esc($r['plat_nomor'] ?? '-') ?></td>
         <td class="text-end"><?= rupiah($r['total_jasa']) ?></td>

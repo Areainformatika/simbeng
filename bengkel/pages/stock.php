@@ -109,7 +109,7 @@ $log = $db->query("SELECT sm.*, p.kode, p.nama AS part_nama, s.nama AS supplier_
         <?php if (!$log): ?><tr><td colspan="6" class="text-center text-muted">Belum ada pergerakan stok.</td></tr><?php endif; ?>
         <?php foreach ($log as $l): ?>
           <tr>
-            <td class="small"><?= esc($l['created_at']) ?></td>
+            <td class="small"><?= esc(lokal($l['created_at'])) ?></td>
             <td><?= esc($l['kode']) ?> - <?= esc($l['part_nama']) ?></td>
             <td><span class="badge bg-<?= $l['tipe']==='masuk' ? 'success' : 'danger' ?>"><?= strtoupper($l['tipe']) ?></span>
               <?php if ($l['ref_type'] && $l['ref_type'] !== 'manual'): ?><span class="badge bg-secondary"><?= esc($l['ref_type']) ?></span><?php endif; ?></td>

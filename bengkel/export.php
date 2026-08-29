@@ -42,7 +42,7 @@ if ($type === 'parts') {
     $no = 1; $tj = 0; $tp = 0; $ta = 0;
     foreach ($rows as $r) {
         $tj += $r['total_jasa']; $tp += $r['total_part']; $ta += $r['grand_total'];
-        $data[] = [$no++, $r['no_nota'], $r['created_at'], $r['customer_nama'], $r['plat_nomor'] ?: '-',
+        $data[] = [$no++, $r['no_nota'], lokal($r['created_at']), $r['customer_nama'], $r['plat_nomor'] ?: '-',
                    rupiah($r['total_jasa']), rupiah($r['total_part']), rupiah($r['grand_total'])];
     }
     $footer = ['', 'TOTAL (' . count($rows) . ' transaksi)', '', '', '', rupiah($tj), rupiah($tp), rupiah($ta)];
@@ -51,7 +51,7 @@ if ($type === 'parts') {
 
 // ---- Bangun tabel HTML (dipakai oleh semua format) ----
 $html  = '<h2 style="margin:0">' . esc($judul) . '</h2>';
-$html .= '<p style="margin:4px 0 12px">' . esc($subjudul) . ' &mdash; Bengkel Motor</p>';
+$html .= '<p style="margin:4px 0 12px">' . esc($subjudul) . ' &mdash; ' . esc(setting('nama_bengkel', 'Bengkel Motor')) . '</p>';
 $html .= '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:13px">';
 $html .= '<thead><tr style="background:#1e2a38;color:#fff">';
 foreach ($headers as $h) $html .= '<th>' . esc($h) . '</th>';

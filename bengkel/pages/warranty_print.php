@@ -29,14 +29,16 @@ $label = ['pending'=>'Pending / Diajukan', 'diproses'=>'Sedang Diproses', 'diset
 <body>
 <div class="nota" data-testid="warranty-receipt">
   <div class="text-center">
-    <strong style="font-size:16px">BENGKEL MOTOR</strong><br>
-    <span style="font-size:12px">Jl. Contoh No. 1 - Telp 0812-3456-7890</span><br>
+    <strong style="font-size:16px"><?= esc(strtoupper(setting('nama_bengkel', 'BENGKEL MOTOR'))) ?></strong><br>
+    <?php if (setting('alamat')): ?><span style="font-size:12px"><?= esc(setting('alamat')) ?><?= setting('telepon') ? ' - Telp ' . esc(setting('telepon')) : '' ?></span><br><?php endif; ?>
+    <?php if (setting('nib')): ?><span style="font-size:11px">NIB: <?= esc(setting('nib')) ?></span><br><?php endif; ?>
     <strong style="font-size:13px">BUKTI PENERIMAAN KLAIM GARANSI</strong>
     <hr>
   </div>
   <table>
     <tr><td style="width:42%">Kode Klaim</td><td>: <strong><?= esc($c['kode']) ?></strong></td></tr>
-    <tr><td>Tanggal Pengajuan</td><td>: <?= esc($c['created_at']) ?></td></tr>
+    <tr><td>Tanggal Pengajuan</td><td>: <?= esc(lokal($c['created_at'])) ?> WIB</td></tr>
+    <tr><td>Waktu Cetak</td><td>: <span id="waktuCetak" data-testid="waktu-cetak"></span></td></tr>
     <tr><td>Nota Terkait</td><td>: <?= esc($c['no_nota']) ?></td></tr>
     <tr><td>Pelanggan</td><td>: <?= esc($c['customer_nama']) ?> (<?= esc($c['telepon']) ?>)</td></tr>
     <tr><td>Item Digeransikan</td><td>: <?= esc($c['item_nama']) ?></td></tr>
@@ -59,5 +61,14 @@ $label = ['pending'=>'Pending / Diajukan', 'diproses'=>'Sedang Diproses', 'diset
     <a href="index.php?page=warranty&claim=<?= $c['id'] ?>" class="btn btn-outline-secondary btn-sm">Kembali</a>
   </div>
 </div>
+<script>
+// Waktu cetak realtime mengikuti jam perangkat pengguna
+function tickWaktu() {
+  const el = document.getElementById('waktuCetak');
+  if (el) el.textContent = new Date().toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+tickWaktu();
+setInterval(tickWaktu, 1000);
+</script>
 </body>
 </html>

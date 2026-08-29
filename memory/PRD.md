@@ -29,6 +29,8 @@ Aplikasi web manajemen bengkel motor: PHP native + SQLite (bengkel.db auto-creat
 - Master Kategori Sparepart: CRUD kategori (pages/categories.php), dropdown kategori pada form sparepart, auto-register kategori baru saat import Excel.
 - Rekap & Laporan (pages/reports.php): filter harian/mingguan/bulanan/tahunan/custom (dari-sampai tanggal), ringkasan jumlah transaksi + total jasa/sparepart/pendapatan.
 - Export laporan (export.php): transaksi & daftar sparepart dalam format Excel (.xls), Word (.doc), PDF (print-view Save as PDF) — tanpa library eksternal agar tetap kompatibel cPanel/XAMPP.
+- Pengaturan (pages/settings.php, admin): identitas bengkel (nama, NIB, pemilik, alamat, telepon) tampil di sidebar/login/nota/bukti garansi/laporan; tema warna gradasi via slider hue + live preview + preset, tersimpan di tabel settings.
+- Perbaikan waktu cetakan: timestamp nota/bukti garansi/laporan dikonversi UTC→WIB (helper lokal()), ditambah "Waktu Cetak" realtime mengikuti jam perangkat (JS toLocaleString, tick tiap detik).
 - Auth multi-user (admin/kasir/mekanik), seed admin/admin123.
 - AJAX: lookup kendaraan per pelanggan, pencarian nota untuk garansi, import Excel via SheetJS.
 - Barcode: kamera HP (html5-qrcode) + scanner USB (keyboard input) di halaman Sparepart & POS.

@@ -19,7 +19,9 @@ if ($action === 'create') {
     $item = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($item && $alasan !== '') {
         $garansi = (int)$item['garansi_hari'];
-        $tgl_berakhir = date('Y-m-d', strtotime($item['tgl_beli'] . " +$garansi days"));
+        // Tanggal beli & akhir garansi dihitung dari tanggal WIB (bukan UTC mentah)
+        $tgl_beli_wib = lokal($item['tgl_beli'], 'Y-m-d');
+        $tgl_berakhir = date('Y-m-d', strtotime($tgl_beli_wib . " +$garansi days"));
         // Validasi server-side: item tanpa garansi / garansi kedaluwarsa tidak bisa diklaim
         if ($garansi <= 0) {
             set_flash('danger', 'Item ini tidak memiliki masa garansi.');
@@ -36,7 +38,7 @@ if ($action === 'create') {
                 $db->prepare("INSERT INTO warranty_claims (kode, transaction_id, transaction_item_id, customer_id, item_nama, tgl_beli, tgl_berakhir, status, alasan)
                     VALUES (?,?,?,?,?,?,?, 'pending', ?)")
                    ->execute([$kode, $item['trx_id'], $item_id, $item['customer_id'], $item['nama'],
-                              date('Y-m-d', strtotime($item['tgl_beli'])), $tgl_berakhir,
+                              $tgl_beli_wib, $tgl_berakhir,
                               $alasan]);
                 set_flash('success', "Klaim garansi $kode berhasil diajukan.");
             }
@@ -69,9 +71,8 @@ if ($action === 'update_status') {
         } elseif ($status !== 'disetujui') {
             $replacement = null;
         }
-        $db->prepare("UPDATE warranty_claims SET status=?, catatan_teknisi=?, replacement_part_id=?, updated_at=datetime('now','localtime') WHERE id=?")
-           ->execute([$status, $catatan, $replacement, $claim_id]);
-        $db->commit();
+        $db->prepare("UPDATE warranty_claims SET status=?, catatan_teknisi=?, replacement_part_id=?, updated_at=datetime('now') WHERE id=?")
+           ->execute([$status, $catatan, $replacement, $claim_id]);        $db->commit();
         set_flash('success', 'Status klaim diperbarui.');
     } catch (Exception $e) {
         $db->rollBack();
@@ -217,12 +218,12 @@ async function cariNota() {
   data.forEach(t => {
     html += `<div class="border rounded p-2 mb-2">
       <div class="d-flex justify-content-between">
-        <strong>${t.no_nota}</strong><span class="small text-muted">${t.created_at}</span>
+        <strong>${t.no_nota}</strong><span class="small text-muted">${t.created_at_wib}</span>
       </div>
       <div class="small">${t.customer_nama} ${t.plat_nomor ? ' / ' + t.plat_nomor : ''}</div>
       <div class="mt-1">`;
     t.items.forEach(it => {
-      const exp = new Date(t.created_at.split(' ')[0]); exp.setDate(exp.getDate() + it.garansi_hari);
+      const exp = new Date(t.tgl_beli_wib + 'T00:00:00'); exp.setDate(exp.getDate() + it.garansi_hari);
       const masih = exp >= new Date(new Date().toDateString());
       html += `<form method="post" class="d-flex align-items-center gap-2 border-top py-1">
         <input type="hidden" name="action" value="create">

@@ -28,13 +28,16 @@ $items = $items->fetchAll(PDO::FETCH_ASSOC);
 <body>
 <div class="nota" data-testid="receipt">
   <div class="text-center">
-    <strong style="font-size:16px">BENGKEL MOTOR</strong><br>
-    <span style="font-size:12px">Jl. Contoh No. 1 - Telp 0812-3456-7890</span>
+    <strong style="font-size:16px"><?= esc(strtoupper(setting('nama_bengkel', 'BENGKEL MOTOR'))) ?></strong><br>
+    <?php if (setting('alamat')): ?><span style="font-size:12px"><?= esc(setting('alamat')) ?><?= setting('telepon') ? ' - Telp ' . esc(setting('telepon')) : '' ?></span><br><?php endif; ?>
+    <?php if (setting('nib')): ?><span style="font-size:11px">NIB: <?= esc(setting('nib')) ?></span><br><?php endif; ?>
+    <?php if (setting('pemilik')): ?><span style="font-size:11px">Pemilik: <?= esc(setting('pemilik')) ?></span><br><?php endif; ?>
     <hr>
   </div>
   <table>
     <tr><td>Nota</td><td>: <?= esc($t['no_nota']) ?></td></tr>
-    <tr><td>Tanggal</td><td>: <?= esc($t['created_at']) ?></td></tr>
+    <tr><td>Tanggal</td><td>: <?= esc(lokal($t['created_at'])) ?> WIB</td></tr>
+    <tr><td>Waktu Cetak</td><td>: <span id="waktuCetak" data-testid="waktu-cetak"></span></td></tr>
     <tr><td>Pelanggan</td><td>: <?= esc($t['customer_nama']) ?></td></tr>
     <?php if ($t['plat_nomor']): ?>
     <tr><td>Kendaraan</td><td>: <?= esc($t['merek'] . ' ' . $t['model'] . ' / ' . $t['plat_nomor']) ?></td></tr>
@@ -46,7 +49,7 @@ $items = $items->fetchAll(PDO::FETCH_ASSOC);
     <tr>
       <td><?= esc($it['nama']) ?><?= $it['tipe']==='part' ? " x{$it['qty']}" : '' ?>
         <?php if ($it['garansi_hari'] > 0): ?>
-        <div class="garansi-info">Garansi <?= $it['garansi_hari'] ?> hari s.d. <?= date('d/m/Y', strtotime($t['created_at'] . " +{$it['garansi_hari']} days")) ?></div>
+        <div class="garansi-info">Garansi <?= $it['garansi_hari'] ?> hari s.d. <?= date('d/m/Y', strtotime(lokal($t['created_at'], 'Y-m-d') . " +{$it['garansi_hari']} days")) ?></div>
         <?php endif; ?>
       </td>
       <td class="text-end"><?= number_format($it['subtotal'], 0, ',', '.') ?></td>
@@ -67,5 +70,14 @@ $items = $items->fetchAll(PDO::FETCH_ASSOC);
     <a href="index.php" class="btn btn-outline-secondary btn-sm">Dashboard</a>
   </div>
 </div>
+<script>
+// Waktu cetak realtime mengikuti jam perangkat pengguna
+function tickWaktu() {
+  const el = document.getElementById('waktuCetak');
+  if (el) el.textContent = new Date().toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+tickWaktu();
+setInterval(tickWaktu, 1000);
+</script>
 </body>
 </html>

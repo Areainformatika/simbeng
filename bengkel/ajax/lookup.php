@@ -35,6 +35,9 @@ if ($action === 'search_trx') {
     foreach ($rows as &$r) {
         $itemStmt->execute([$r['id']]);
         $r['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Sediakan versi WIB untuk tampilan & perhitungan masa garansi di browser
+        $r['created_at_wib'] = lokal($r['created_at']);
+        $r['tgl_beli_wib'] = lokal($r['created_at'], 'Y-m-d');
     }
     echo json_encode($rows);
     exit;

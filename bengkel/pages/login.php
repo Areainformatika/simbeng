@@ -1,4 +1,8 @@
 <?php
+// Halaman login memakai nama bengkel & tema gradasi dari pengaturan
+$th1 = (int)setting('theme_h1', '210');
+$th2 = (int)setting('theme_h2', '232');
+$app_name = setting('nama_bengkel', 'Sistem Bengkel Motor');
 // Proses login (username + password)
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,11 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Login - Sistem Bengkel Motor</title>
+<title>Login - <?= esc($app_name) ?></title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <style>
-  body { background: #1e2a38; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  body { background: linear-gradient(150deg, hsl(<?= $th1 ?> 60% 18%), hsl(<?= $th2 ?> 65% 32%)); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
   .login-card { width: 100%; max-width: 400px; border: 0; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
 </style>
 </head>
@@ -33,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="card-body p-4">
     <div class="text-center mb-4">
       <i class="bi bi-gear-wide-connected text-primary" style="font-size:3rem"></i>
-      <h1 class="h4 mt-2 mb-0">Sistem Bengkel Motor</h1>
+      <h1 class="h4 mt-2 mb-0"><?= esc($app_name) ?></h1>
       <p class="text-muted small">Silakan masuk untuk melanjutkan</p>
     </div>
     <?php if ($error): ?>

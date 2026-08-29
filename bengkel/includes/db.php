@@ -6,6 +6,9 @@
 
 define('DB_PATH', __DIR__ . '/../bengkel.db');
 
+// Zona waktu aplikasi (WIB) untuk seluruh fungsi date() PHP
+date_default_timezone_set('Asia/Jakarta');
+
 function db(): PDO {
     static $pdo = null;
     if ($pdo === null) {
@@ -25,14 +28,14 @@ function init_db(): void {
         password_hash TEXT NOT NULL,
         nama TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'kasir',
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nama TEXT NOT NULL,
         telepon TEXT DEFAULT '',
         alamat TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +43,7 @@ function init_db(): void {
         merek TEXT NOT NULL,
         model TEXT DEFAULT '',
         plat_nomor TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS suppliers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +52,7 @@ function init_db(): void {
         email TEXT DEFAULT '',
         alamat TEXT DEFAULT '',
         keterangan TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS parts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +64,7 @@ function init_db(): void {
         harga_jual REAL NOT NULL DEFAULT 0,
         stok INTEGER NOT NULL DEFAULT 0,
         stok_min INTEGER NOT NULL DEFAULT 5,
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS stock_movements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +75,7 @@ function init_db(): void {
         ref_type TEXT DEFAULT '',
         ref_id INTEGER,
         keterangan TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +87,7 @@ function init_db(): void {
         grand_total REAL NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'selesai',
         catatan TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     $db->exec("CREATE TABLE IF NOT EXISTS transaction_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,15 +114,20 @@ function init_db(): void {
         alasan TEXT DEFAULT '',
         catatan_teknisi TEXT DEFAULT '',
         replacement_part_id INTEGER REFERENCES parts(id),
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )");
     // Master kategori jenis sparepart (dipakai dropdown saat input sparepart)
     $db->exec("CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nama TEXT UNIQUE NOT NULL,
         keterangan TEXT DEFAULT '',
-        created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )");
+    // Tabel pengaturan aplikasi (nama bengkel, NIB, pemilik, tema warna, dll.)
+    $db->exec("CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT DEFAULT ''
     )");
 
     // Seed akun admin default (admin / admin123) jika tabel users kosong
@@ -135,6 +143,19 @@ function init_db(): void {
         $ins = db()->prepare("INSERT OR IGNORE INTO categories (nama) VALUES (?)");
         foreach (array_unique(array_merge($defaults, $existing)) as $k) $ins->execute([$k]);
     }
+
+    // Seed pengaturan default (INSERT OR IGNORE -> tidak menimpa pengaturan user)
+    $setting_defaults = [
+        'nama_bengkel' => 'Bengkel Motor',
+        'nib'          => '',
+        'pemilik'      => '',
+        'alamat'       => 'Jl. Contoh No. 1',
+        'telepon'      => '0812-3456-7890',
+        'theme_h1'     => '210',
+        'theme_h2'     => '232',
+    ];
+    $ins = db()->prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
+    foreach ($setting_defaults as $k => $v) $ins->execute([$k, $v]);
 }
 
 // ---------- Helper umum ----------
@@ -142,6 +163,32 @@ function esc($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-
 function rupiah($n): string { return 'Rp ' . number_format((float)$n, 0, ',', '.'); }
 function set_flash(string $type, string $msg): void { $_SESSION['flash'] = ['type' => $type, 'msg' => $msg]; }
 function get_flash() { $f = $_SESSION['flash'] ?? null; unset($_SESSION['flash']); return $f; }
+
+// ---------- Pengaturan aplikasi ----------
+function setting(string $key, string $default = ''): string {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        foreach (db()->query("SELECT key, value FROM settings") as $r) $cache[$r['key']] = $r['value'];
+    }
+    return $cache[$key] ?? $default;
+}
+function set_setting(string $key, string $value): void {
+    db()->prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        ->execute([$key, $value]);
+}
+
+// Konversi datetime tersimpan (UTC) ke WIB untuk tampilan & cetakan
+function lokal(?string $dt, string $format = 'd/m/Y H:i'): string {
+    if (!$dt) return '-';
+    try {
+        $d = new DateTime($dt, new DateTimeZone('UTC'));
+        $d->setTimezone(new DateTimeZone('Asia/Jakarta'));
+        return $d->format($format);
+    } catch (Exception $e) {
+        return $dt;
+    }
+}
 
 // Generator kode berurut per bulan, misal: TRX-202606-001 / GRS-202606-001
 function next_kode(string $prefix, string $table, string $col): string {
@@ -203,7 +250,7 @@ function laporan_transaksi(string $dari, string $sampai): array {
         FROM transactions t
         JOIN customers c ON c.id = t.customer_id
         LEFT JOIN vehicles v ON v.id = t.vehicle_id
-        WHERE date(t.created_at) BETWEEN ? AND ?
+        WHERE date(t.created_at, '+7 hours') BETWEEN ? AND ?
         ORDER BY t.created_at");
     $stmt->execute([$dari, $sampai]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -112,7 +112,7 @@ if ($view) {
             <?php foreach ($history as $h): ?>
               <tr>
                 <td><?= esc($h['no_nota']) ?></td><td><?= esc($h['plat_nomor'] ?? '-') ?></td>
-                <td class="text-end"><?= rupiah($h['grand_total']) ?></td><td><?= esc($h['created_at']) ?></td>
+                <td class="text-end"><?= rupiah($h['grand_total']) ?></td><td><?= esc(lokal($h['created_at'])) ?></td>
                 <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="index.php?page=receipt&id=<?= $h['id'] ?>" data-testid="history-receipt-<?= $h['id'] ?>"><i class="bi bi-printer"></i></a></td>
               </tr>
             <?php endforeach; ?>

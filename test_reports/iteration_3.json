@@ -1,0 +1,41 @@
+{
+  "summary": "Iterasi 3 diuji penuh (backend HTTP-level + UI Playwright) pada app PHP/SQLite di preview URL. 12 test baru (test_iter3_settings_time.py) + 65 regresi lama = 77/77 PASSED. Verifikasi: (A) Tanggal pada struk nota & bukti garansi = created_at mentah SQLite + 7 jam, format dd/mm/YYYY HH:MM WIB (contoh raw 2026-08-29 05:24:59 -> 29/08/2026 12:24 WIB); baris 'Waktu Cetak' berdetak setiap detik mengikuti jam perangkat (terbukti berubah 05.26.22 -> 05.26.24 di browser UTC — perilaku benar). Export transaksi (pdf & xls) memakai lokal() dan menampilkan nama bengkel dari pengaturan. (B) Pengaturan admin-only bekerja: simpan identitas -> tampil di sidebar semua halaman, title tab, halaman login, struk (nama+NIB+pemilik+alamat+telp), bukti garansi, header export; persisten di tabel settings. RBAC: kasir tidak melihat nav-settings dan akses langsung index.php?page=settings di-redirect + flash 'Akses ditolak. Halaman ini khusus admin.'. (C) Tema: slider live preview berubah, preset (Merah Marun 350/15, Biru Gelap 210/232) memindahkan slider & label, setelah simpan sidebar & login memakai linear-gradient hue baru (hsl(350...)->rgb(73,18,28)). Hue di-clamp 0-359. Regresi POS end-to-end via UI menghasilkan nota dengan nama custom + waktu WIB benar. Setting & user test sudah dibersihkan/dikembalikan (Bengkel Motor, 210/232).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "pages/dashboard.php:68, pages/transactions.php:40, pages/reports.php:85, pages/warranty.php:220", "issue": "Tampilan layar masih mencetak created_at MENTAH (UTC) tanpa lokal(). Akibatnya transaksi yang sama tampil '2026-08-29 05:24:59' di dashboard/riwayat/rekap tapi '29/08/2026 12:24 WIB' di struk -> beda 7 jam, membingungkan pengguna. Sebaiknya pakai lokal() juga di tabel-tabel ini."},
+      {"endpoint": "pages/receipt.php:52", "issue": "Tanggal akhir garansi dihitung dari created_at mentah (strtotime tanpa konversi WIB), sehingga untuk transaksi yang dibuat antara 17:00-23:59 UTC tanggal garansi bisa mundur 1 hari dibanding tanggal WIB pada nota."},
+      {"endpoint": "export.php / laporan_transaksi()", "issue": "Filter periode memakai date(t.created_at) mentah (UTC) sementara label periode & default tanggal memakai zona Asia/Jakarta. Transaksi antara 00:00-06:59 WIB (=17:00-23:59 UTC hari sebelumnya) akan masuk ke tanggal laporan yang salah."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Pengaturan", "issues": ["Tombol preset tema tidak menandai preset yang sedang aktif (tidak ada state highlight) — kosmetik, opsional"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter3_settings_time.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_edge_cases.py",
+    "/app/backend/tests/test_iter2_features.py",
+    "/app/test_reports/pytest/pytest_results_iter3.xml"
+  ],
+  "action_items": [
+    "OPSIONAL/KONSISTENSI: terapkan lokal() pada kolom Tanggal di dashboard, riwayat transaksi, rekap laporan, dan daftar transaksi pemilih garansi agar tidak beda 7 jam dengan struk",
+    "OPSIONAL: hitung tanggal akhir garansi & filter periode laporan dari created_at yang sudah dikonversi WIB (edge case transaksi malam UTC)"
+  ],
+  "critical_code_review_comments": [
+    "created_at diisi datetime('now','localtime') SQLite (= zona container, UTC) dan lokal() mengasumsikan UTC. Jika suatu saat container TZ diubah (mis. ke Asia/Jakarta) maka lokal() akan menambah 7 jam ganda. Lebih aman menyimpan dengan datetime('now') (UTC eksplisit) agar asumsi lokal() selalu valid.",
+    "settings.php: setting() memakai static cache; setelah set_setting() dalam request yang sama cache tidak di-invalidate. Saat ini aman karena selalu redirect setelah simpan, tapi rapuh jika nanti dirender langsung."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter3_settings_time.py"],
+  "success_rate": {"backend": "100% (77/77)", "frontend": "100% (semua flow UI iterasi 3 lulus)"},
+  "seed_data_creation": "Membuat user kasir sementara (TEST_kasir_it3, TEST_kasir_ui3) untuk uji RBAC — sudah dihapus. Membuat 2 transaksi uji (jasa TEST) via POS. Settings diubah sementara lalu dikembalikan ke nama_bengkel='Bengkel Motor', alamat='Jl. Contoh No. 1', telepon='0812-3456-7890', nib/pemilik kosong, theme 210/232.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin/admin123 (dari /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Jalankan pytest dengan -n0 (pytest.ini memakai xdist loadscope; test iter3 punya fixture module-scope urutan-sensitif: test_restore_settings mengembalikan settings). File DB /app/bengkel/bengkel.db bisa dibaca via python sqlite3 (CLI sqlite3 tidak terinstal). Slider range harus di-set via JS dispatchEvent('input'). Browser test berzona UTC: 'Waktu Cetak' akan berbeda 7 jam dari kolom 'Tanggal' WIB — itu benar.",
+  "rca_of_the_issue": "Bug waktu cetakan sudah teratasi: helper lokal() mengonversi created_at (disimpan pada zona container/UTC) ke Asia/Jakarta untuk struk, bukti garansi, dan export; 'Waktu Cetak' dirender client-side dengan setInterval 1s sehingga selalu mengikuti jam perangkat. Sisa inkonsistensi hanya pada tampilan daftar di layar (dashboard/riwayat/rekap) yang masih menampilkan waktu mentah UTC."
+}

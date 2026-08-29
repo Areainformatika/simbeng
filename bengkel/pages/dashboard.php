@@ -1,8 +1,8 @@
 <?php
 // Statistik ringkas dashboard
 $db = db();
-$pendapatan_hari_ini = (float)$db->query("SELECT COALESCE(SUM(grand_total),0) FROM transactions WHERE date(created_at)=date('now','localtime')")->fetchColumn();
-$servis_hari_ini     = (int)$db->query("SELECT COUNT(*) FROM transactions WHERE date(created_at)=date('now','localtime')")->fetchColumn();
+$pendapatan_hari_ini = (float)$db->query("SELECT COALESCE(SUM(grand_total),0) FROM transactions WHERE date(created_at,'+7 hours')=date('now','+7 hours')")->fetchColumn();
+$servis_hari_ini     = (int)$db->query("SELECT COUNT(*) FROM transactions WHERE date(created_at,'+7 hours')=date('now','+7 hours')")->fetchColumn();
 $servis_total        = (int)$db->query("SELECT COUNT(*) FROM transactions WHERE status='selesai'")->fetchColumn();
 $stok_menipis        = (int)$db->query("SELECT COUNT(*) FROM parts WHERE stok <= stok_min")->fetchColumn();
 $total_pelanggan     = (int)$db->query("SELECT COUNT(*) FROM customers")->fetchColumn();
@@ -65,7 +65,7 @@ $low_parts = $db->query("SELECT * FROM parts WHERE stok <= stok_min ORDER BY sto
             <td><?= esc($t['customer_nama']) ?></td>
             <td><?= esc($t['plat_nomor'] ?? '-') ?></td>
             <td class="text-end"><?= rupiah($t['grand_total']) ?></td>
-            <td><?= esc($t['created_at']) ?></td>
+            <td><?= esc(lokal($t['created_at'])) ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody>
