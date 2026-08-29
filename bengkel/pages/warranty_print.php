@@ -29,6 +29,9 @@ $label = ['pending'=>'Pending / Diajukan', 'diproses'=>'Sedang Diproses', 'diset
 <body>
 <div class="nota" data-testid="warranty-receipt">
   <div class="text-center">
+    <?php $logo = setting('logo'); if ($logo && is_file(__DIR__ . '/../' . $logo)): ?>
+    <img src="<?= esc($logo) ?>" alt="Logo" style="max-height:56px;margin-bottom:6px" data-testid="warranty-logo"><br>
+    <?php endif; ?>
     <strong style="font-size:16px"><?= esc(strtoupper(setting('nama_bengkel', 'BENGKEL MOTOR'))) ?></strong><br>
     <?php if (setting('alamat')): ?><span style="font-size:12px"><?= esc(setting('alamat')) ?><?= setting('telepon') ? ' - Telp ' . esc(setting('telepon')) : '' ?></span><br><?php endif; ?>
     <?php if (setting('nib')): ?><span style="font-size:11px">NIB: <?= esc(setting('nib')) ?></span><br><?php endif; ?>

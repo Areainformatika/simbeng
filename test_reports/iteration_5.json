@@ -1,0 +1,79 @@
+{
+  "summary": "Iterasi 5 diuji end-to-end (backend pytest + Playwright UI) untuk 3 fitur baru: Grafik Pelanggan, upload logo bengkel, sticky notes. Fitur baru berjalan sangat baik (43/45 test iter5 PASS, semua flow UI PASS). NAMUN regresi KRITIS ditemukan: pembuatan transaksi di POS 100% gagal (UNIQUE constraint no_nota) karena next_kode() memakai COUNT(*) dan sudah ada gap id akibat fitur hapus transaksi iterasi 4 -> 23 test lama gagal. Juga ditemukan POST-redirect (PRG) rusak/flaky karena header.php dirender sebelum handler POST, dan upload file >2MB gagal tanpa pesan error.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /index.php?page=pos (action=save_trx) + includes/db.php next_kode()",
+        "issue": "Semua checkout gagal: 'SQLSTATE[23000] UNIQUE constraint failed: transactions.no_nota'. next_kode() menghitung COUNT(*) baris dengan prefix TRX-YYYYMM-% lalu +1; setelah ada transaksi yang dihapus (fitur hapus iterasi 4) nomor hasil hitung (TRX-202608-032) sudah dipakai baris lain sehingga insert gagal selamanya. Dampak: POS tidak bisa dipakai sama sekali; 23 test regresi (backend_test TestPOS/TestWarranty, iter2, iter3, iter4 diskon & edit/hapus) gagal. Perbaikan: derive nomor dari MAX(nomor urut) bukan COUNT, atau retry saat konflik.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "warranty.php next_kode('GRS','warranty_claims','kode')",
+        "issue": "Pola bug yang sama (COUNT-based) -> klaim garansi akan gagal permanen begitu ada satu klaim terhapus/gap. Perlu diperbaiki bersamaan.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /index.php?page=notes & ?page=settings (redirect)",
+        "issue": "PRG (post-redirect-get) tidak konsisten: index.php merender includes/header.php SEBELUM handler POST halaman, jadi header('Location: ...') hanya berhasil selama output masih < output_buffering (4096 byte php.ini). Terbukti: POST notes add -> HTTP 200 tanpa Location (refresh browser akan menduplikasi catatan); POST settings save kadang 302 kadang 200 (test_iter3::test_restore_settings gagal). Solusi: proses handler POST sebelum output apa pun, atau ob_start() di index.php."
+      },
+      {
+        "endpoint": "POST /index.php?page=settings (upload_logo)",
+        "issue": "File > 2MB ditolak PHP (upload_max_filesize=2M => UPLOAD_ERR_INI_SIZE), tetapi handler hanya berjalan bila error === UPLOAD_ERR_OK sehingga TIDAK ADA flash error apa pun (silent fail); cek 'Ukuran logo maksimal 2 MB' di kode tidak pernah tercapai. Tangani $_FILES['logo']['error'] (INI_SIZE/FORM_SIZE/PARTIAL) dengan pesan yang jelas."
+      },
+      {
+        "endpoint": "settings.php upload_logo naming",
+        "issue": "Nama file logo memakai time() (detik) -> dua upload dalam detik yang sama menghasilkan nama sama (file lama dihapus lalu ditulis ulang; berpotensi race). Gunakan uniqid()/random hex."
+      },
+      {
+        "endpoint": "data (bukan endpoint)",
+        "issue": "bengkel.db penuh sisa data test iterasi sebelumnya (TEST_Pelanggan_*, UI Pelanggan_*, TEST_Part_*). Top-10 Grafik Pelanggan didominasi nama TEST_* sehingga preview user tampak kotor. Sarankan cleanup data TEST_*."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Tambah catatan (notes)",
+        "issue": "Response POST notes tidak redirect (HTTP 200), sehingga reload halaman setelah menambah catatan akan mengirim ulang form (duplikat catatan). Fungsional di UI tetap berjalan.",
+        "affected_selectors": ["[data-testid=\"note-form\"]", "[data-testid=\"note-submit\"]"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Grafik Pelanggan",
+        "issues": ["Tidak ada isu desain; bar chart, doughnut, legend, dan tabel peringkat rapi dan kontras baik"]
+      },
+      {
+        "screen": "Catatan / Sticky Notes",
+        "issues": ["Tampilan kartu miring + 5 warna sesuai spesifikasi; timestamp text-muted di kartu putih agak rendah kontras namun masih terbaca"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_features.py",
+    "/app/test_reports/pytest/pytest_iter5.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Perbaiki next_kode() (db.php) agar tidak COUNT-based -> POS checkout saat ini 100% gagal (UNIQUE no_nota). Terapkan juga untuk kode klaim garansi.",
+    "HIGH: Perbaiki alur POST-redirect: proses handler POST sebelum render header.php (atau ob_start di index.php) agar semua redirect (notes, settings, dll.) konsisten 302.",
+    "MEDIUM: Tangani $_FILES error code pada upload logo agar file >2MB memberi pesan error, bukan silent fail.",
+    "LOW: Gunakan uniqid() untuk nama file logo; bersihkan data TEST_* dari bengkel.db agar grafik pelanggan menampilkan data nyata."
+  ],
+  "critical_code_review_comments": [
+    "includes/db.php next_kode(): COUNT(*)+1 tidak aman terhadap penghapusan baris; ganti dengan MAX(CAST(substr(col,-3) AS INTEGER))+1 dalam transaksi, atau tangkap PDOException UNIQUE dan retry.",
+    "index.php: router merender header.php sebelum memuat halaman, sehingga semua handler POST yang memanggil header('Location:') bergantung pada output_buffering; pisahkan fase 'handle request' dan 'render'.",
+    "pages/settings.php: kondisi upload hanya menerima UPLOAD_ERR_OK; error upload lain diabaikan tanpa feedback ke pengguna.",
+    "charts.php: agregasi & filter WIB sudah benar dan aman terhadap input tidak valid (resolve_periode memvalidasi format), tidak ada SQL injection (prepared statement)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter5_features.py"],
+  "success_rate": {"backend": "iter5 file 95.6% (43/45); seluruh suite 83% (122/147, 23 kegagalan berasal dari 1 bug no_nota)", "frontend": "100% (charts, notes, logo flows)"},
+  "seed_data_creation": "Test membuat & menghapus kembali: user TEST_kasir_it5, catatan TEST_*, pelanggan/part TEST_*_Iter5. Logo akhir: /app/bengkel/uploads/logo_1787983964.png (300x300 PNG biru-putih, sudah terpasang & tampil di sidebar/login/nota).",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin/admin123 (dari /app/memory/test_credentials.md); kasir uji dibuat sementara: TEST_kasir_it5/kasir123",
+  "context_for_next_testing_agent": "Jalankan 'cd /app/backend && python -m pytest tests/ -n0 -q'. File baru: tests/test_iter5_features.py (charts vs agregasi SQLite, logo upload/replace/reject/remove + tampil di sidebar/login/receipt/warranty, notes CRUD 5 warna + XSS + role kasir, regresi POS). Dua test yang gagal by design mendokumentasikan bug: TestLogo::test_reject_oversize (tidak ada pesan error untuk file >2MB) dan TestRegression::test_pos_create_transaction (bug no_nota). Setelah bug no_nota diperbaiki, 23 test lama seharusnya hijau kembali. Selalu tutup koneksi sqlite di finally (helper dbq/dbx sudah begitu). Chart.js CDN dapat diakses; canvas terverifikasi non-blank via getImageData.",
+  "rca_of_the_issue": "next_kode('TRX','transactions','no_nota') menghasilkan nomor dari COUNT(*) baris bulan berjalan + 1. Database saat ini punya 31 transaksi tetapi nomor tertinggi TRX-202608-032 (ada nomor yang hilang karena transaksi dihapus di iterasi 4). Akibatnya nomor berikutnya yang dihitung = 032 yang sudah dipakai -> UNIQUE constraint failed dan insert selalu di-rollback, sehingga COUNT tidak pernah bertambah dan POS macet permanen. Reproduksi: POST /index.php?page=pos action=save_trx dengan 1 jasa + 1 part -> redirect kembali ke page=pos dengan flash 'Gagal menyimpan transaksi: ... UNIQUE constraint failed: transactions.no_nota'. Mitigasi: hitung nomor dari MAX urutan yang ada (atau kolom sequence) dan retry saat bentrok."
+}

@@ -34,6 +34,10 @@ Aplikasi web manajemen bengkel motor: PHP native + SQLite (bengkel.db auto-creat
 - Export laporan stok (export.php?type=stock): filter jenis (semua/masuk/keluar/penjualan/garansi) + rentang tanggal, format PDF/Excel/Word, tombol unduh di halaman Stok Masuk/Keluar.
 - Diskon POS: nominal Rp / persen % sebelum simpan, tersimpan di kolom transactions.diskon (migrasi otomatis), tampil di struk nota & mempengaruhi grand total.
 - Edit & hapus transaksi di Riwayat: edit memakai form kasir terisi (stok lama dikembalikan lalu dihitung ulang, nota tetap), hapus mengembalikan stok & menghapus movement; keduanya ditolak bila transaksi punya klaim garansi.
+- Grafik Pelanggan (pages/charts.php): top 10 pelanggan by total belanja (bar) & frekuensi (doughnut, Chart.js CDN), filter bulanan/tahunan/custom, tabel peringkat + kontribusi %.
+- Upload logo bengkel di Pengaturan (JPG/PNG/WEBP/GIF maks 2MB -> uploads/), tampil di sidebar/login/nota/bukti garansi.
+- Sticky Notes (pages/notes.php): catatan warna-warni (5 warna), tambah/edit/hapus, timestamp WIB.
+- Bugfix kritikal: next_kode() memakai MAX nomor urut (bukan COUNT) — POS/GRS aman terhadap penghapusan baris; PRG redirect diperbaiki via ob_start() di index.php; upload logo menangani semua error code (>2MB diberi pesan jelas); nama file logo random hex; data uji TEST_* dibersihkan dari database.
 - Auth multi-user (admin/kasir/mekanik), seed admin/admin123.
 - AJAX: lookup kendaraan per pelanggan, pencarian nota untuk garansi, import Excel via SheetJS.
 - Barcode: kamera HP (html5-qrcode) + scanner USB (keyboard input) di halaman Sparepart & POS.

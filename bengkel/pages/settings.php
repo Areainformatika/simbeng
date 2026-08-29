@@ -7,6 +7,47 @@
 // ============================================================
 require_admin();
 
+// ---- Upload logo bengkel (JPG/PNG/WEBP/GIF, maks 2 MB) ----
+if (($_POST['action'] ?? '') === 'upload_logo') {
+    $err = $_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE;
+    if ($err !== UPLOAD_ERR_OK) {
+        // Tangani semua kode error upload (termasuk file >2MB yang ditolak PHP)
+        if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) {
+            set_flash('danger', 'Ukuran logo melebihi batas 2 MB.');
+        } elseif ($err === UPLOAD_ERR_NO_FILE) {
+            set_flash('danger', 'Pilih file logo terlebih dahulu.');
+        } else {
+            set_flash('danger', 'Upload logo gagal. Coba lagi.');
+        }
+        header('Location: index.php?page=settings'); exit;
+    }
+    $f = $_FILES['logo'];
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+    $mime = mime_content_type($f['tmp_name']);
+    if (!isset($allowed[$mime])) {
+        set_flash('danger', 'Format logo harus JPG, PNG, WEBP, atau GIF.');
+    } elseif ($f['size'] > 2 * 1024 * 1024) {
+        set_flash('danger', 'Ukuran logo maksimal 2 MB.');
+    } else {
+        if (!is_dir(__DIR__ . '/../uploads')) mkdir(__DIR__ . '/../uploads', 0775, true);
+        // Hapus file logo lama agar tidak menumpuk
+        $lama = setting('logo');
+        if ($lama && is_file(__DIR__ . '/../' . $lama)) unlink(__DIR__ . '/../' . $lama);
+        $path = 'uploads/logo_' . bin2hex(random_bytes(6)) . '.' . $allowed[$mime];
+        move_uploaded_file($f['tmp_name'], __DIR__ . '/../' . $path);
+        set_setting('logo', $path);
+        set_flash('success', 'Logo bengkel berhasil diunggah.');
+    }
+    header('Location: index.php?page=settings'); exit;
+}
+if (($_POST['action'] ?? '') === 'remove_logo') {
+    $lama = setting('logo');
+    if ($lama && is_file(__DIR__ . '/../' . $lama)) unlink(__DIR__ . '/../' . $lama);
+    set_setting('logo', '');
+    set_flash('success', 'Logo dihapus.');
+    header('Location: index.php?page=settings'); exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
     foreach (['nama_bengkel', 'nib', 'pemilik', 'alamat', 'telepon'] as $k) {
         set_setting($k, trim($_POST[$k] ?? ''));
@@ -70,6 +111,29 @@ $h2 = (int)setting('theme_h2', '232');
 </div>
 <button class="btn btn-primary mt-3" data-testid="settings-submit"><i class="bi bi-check2-circle me-1"></i>Simpan Pengaturan</button>
 </form>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="card table-card"><div class="card-body">
+      <h2 class="h6 mb-3"><i class="bi bi-image me-1"></i>Logo Bengkel</h2>
+      <p class="small text-muted">Logo tampil pada sidebar, halaman login, struk nota, dan bukti klaim garansi. Format JPG/PNG/WEBP/GIF, maks 2 MB.</p>
+      <?php $logo = setting('logo'); if ($logo && is_file(__DIR__ . '/../' . $logo)): ?>
+      <div class="mb-2"><img src="<?= esc($logo) ?>" alt="Logo Bengkel" class="border rounded p-2" style="max-height:90px" data-testid="logo-preview"></div>
+      <?php endif; ?>
+      <form method="post" enctype="multipart/form-data" class="d-flex gap-2" data-testid="logo-form">
+        <input type="hidden" name="action" value="upload_logo">
+        <input type="file" name="logo" accept="image/*" class="form-control form-control-sm" required data-testid="logo-file">
+        <button class="btn btn-sm btn-primary text-nowrap" data-testid="logo-upload-btn"><i class="bi bi-upload me-1"></i>Upload</button>
+      </form>
+      <?php if ($logo): ?>
+      <form method="post" class="mt-2" onsubmit="return confirm('Hapus logo saat ini?')">
+        <input type="hidden" name="action" value="remove_logo">
+        <button class="btn btn-sm btn-outline-danger" data-testid="logo-remove-btn"><i class="bi bi-trash me-1"></i>Hapus Logo</button>
+      </form>
+      <?php endif; ?>
+    </div></div>
+  </div>
+</div>
 
 <script>
 // Live preview gradasi saat slider digeser

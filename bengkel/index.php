@@ -2,6 +2,10 @@
 // ============================================================
 // index.php - Front controller (router) aplikasi bengkel motor
 // ============================================================
+// Buffer output agar redirect header('Location: ...') pada handler POST
+// selalu berhasil (PRG) meski layout sudah mulai dirender
+ob_start();
+
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/auth.php';
 
@@ -30,11 +34,13 @@ $routes = [
     'pos'            => 'Kasir / Transaksi Servis',
     'transactions'   => 'Riwayat Transaksi',
     'reports'        => 'Rekap & Laporan',
+    'charts'         => 'Grafik Pelanggan',
     'receipt'        => 'Struk Nota',
     'warranty'       => 'Klaim Garansi',
     'warranty_print' => 'Bukti Klaim Garansi',
     'users'          => 'Manajemen Pengguna',
     'settings'       => 'Pengaturan',
+    'notes'          => 'Catatan',
 ];
 if (!isset($routes[$page])) $page = 'dashboard';
 

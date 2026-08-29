@@ -130,6 +130,14 @@ function init_db(): void {
         key TEXT PRIMARY KEY,
         value TEXT DEFAULT ''
     )");
+    // Sticky notes: catatan-catatan kecil untuk tim bengkel
+    $db->exec("CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        isi TEXT NOT NULL,
+        warna TEXT NOT NULL DEFAULT 'kuning',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )");
 
     // Seed akun admin default (admin / admin123) jika tabel users kosong
     if ((int) db()->query("SELECT COUNT(*) FROM users")->fetchColumn() === 0) {
@@ -152,6 +160,7 @@ function init_db(): void {
         'pemilik'      => '',
         'alamat'       => 'Jl. Contoh No. 1',
         'telepon'      => '0812-3456-7890',
+        'logo'         => '',
         'theme_h1'     => '210',
         'theme_h2'     => '232',
     ];
@@ -198,11 +207,15 @@ function lokal(?string $dt, string $format = 'd/m/Y H:i'): string {
 }
 
 // Generator kode berurut per bulan, misal: TRX-202606-001 / GRS-202606-001
+// Memakai MAX nomor urut (bukan COUNT) agar aman terhadap penghapusan baris.
+// Nomor urut di-parse setelah prefix "PREFIX-YYYYMM-" sehingga mendukung >999/bulan.
 function next_kode(string $prefix, string $table, string $col): string {
     $ym = date('Ym');
-    $stmt = db()->prepare("SELECT COUNT(*) FROM $table WHERE $col LIKE ?");
+    $start = strlen($prefix) + 9; // posisi 1-based digit pertama nomor urut
+    $stmt = db()->prepare("SELECT MAX(CAST(substr($col, $start) AS INTEGER)) FROM $table WHERE $col LIKE ?");
     $stmt->execute(["$prefix-$ym-%"]);
-    return sprintf('%s-%s-%03d', $prefix, $ym, ((int)$stmt->fetchColumn()) + 1);
+    $next = ((int)$stmt->fetchColumn()) + 1;
+    return sprintf('%s-%s-%03d', $prefix, $ym, $next);
 }
 
 // ============================================================

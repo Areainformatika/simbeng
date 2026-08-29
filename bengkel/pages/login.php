@@ -36,7 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="card login-card" data-testid="login-card">
   <div class="card-body p-4">
     <div class="text-center mb-4">
+      <?php $logo = setting('logo'); if ($logo && is_file(__DIR__ . '/../' . $logo)): ?>
+      <img src="<?= esc($logo) ?>" alt="Logo" style="max-height:72px" data-testid="login-logo">
+      <?php else: ?>
       <i class="bi bi-gear-wide-connected text-primary" style="font-size:3rem"></i>
+      <?php endif; ?>
       <h1 class="h4 mt-2 mb-0"><?= esc($app_name) ?></h1>
       <p class="text-muted small">Silakan masuk untuk melanjutkan</p>
     </div>
